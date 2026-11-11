@@ -1,0 +1,21 @@
+services:
+  mock: # Servicio que se expone por Cloudflare Tunnel para la prueba en vivo
+    build: ./mock
+    ports:
+      - "8000:8000"
+    environment:
+      API_USER: ${API_USER:?Configura API_USER en .env}
+      API_PASS: ${API_PASS:?Configura API_PASS en .env}
+      TEAM: ${TEAM:?Configura TEAM en .env}
+    restart: unless-stopped
+
+  app: # Prototipo de UI e inferencia; no es el endpoint del checkpoint
+    build: ./app
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./app/data:/app/data
+    environment:
+      APP_SECRET: ${APP_SECRET:?Configura APP_SECRET en .env}
+      APP_USERS: ${APP_USERS:?Configura APP_USERS en .env}
+    restart: unless-stopped
