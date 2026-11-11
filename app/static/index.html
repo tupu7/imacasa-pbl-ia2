@@ -2,16 +2,16 @@
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Inspección de machetes · IMACASA</title>
 <style>
-:root{--bg:#e8ebe7;--panel:#f6f7f4;--ink:#17262b;--mute:#5d6b69;--line:#c9cfc8;--acc:#1e6b5c;--bad:#c0392b;--ok:#2f7d4f;--warn:#9a6a0b}
-@media(prefers-color-scheme:dark){:root{--bg:#1a2224;--panel:#222c2f;--ink:#e6ebe8;--mute:#9aa8a5;--line:#37454a;--acc:#4fb39d;--bad:#ff7b6b;--ok:#6fcf93;--warn:#e0b04a}}
+:root{--bg:#e8ebe7;--panel:#f6f7f4;--ink:#17262b;--mute:#5d6b69;--line:#c9cfc8;--acc:#1e6b5c;--bad:#c0392b;--ok:#2f7d4f;--warn:#9a6a0b;--info:#2980b9}
+@media(prefers-color-scheme:dark){:root{--bg:#1a2224;--panel:#222c2f;--ink:#e6ebe8;--mute:#9aa8a5;--line:#37454a;--acc:#4fb39d;--bad:#ff7b6b;--ok:#6fcf93;--warn:#e0b04a;--info:#5dade2}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "Segoe UI","Helvetica Neue",Arial,sans-serif;font-variant-numeric:tabular-nums}
 button,input,select{font:inherit;color:inherit}:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
 .hide{display:none!important}
 #login{min-height:100vh;display:grid;place-items:center;padding:16px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:24px;width:min(380px,100%)}
 h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:0 0 12px}.mute{color:var(--mute)}
-label{display:block;margin:12px 0 4px;font-weight:600}
-input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg)}
+label{display:block;margin:12px 0 4px;font-weight:600;font-size:13px}
+input,select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg)}
 .btn{margin-top:16px;padding:10px 16px;border:0;border-radius:4px;background:var(--acc);color:#fff;font-weight:600;cursor:pointer}
 .btn.sec{background:none;border:1px solid var(--line);color:var(--ink);margin:0}
 .err{color:var(--bad);min-height:1.4em;margin-top:8px}
@@ -27,18 +27,21 @@ main{padding:20px;min-width:0}
 .tab[aria-selected=true]{color:var(--ink);border-color:var(--acc)}
 .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
 .big{font-size:34px;font-weight:700;line-height:1.1}
-.live{display:grid;gap:18px;grid-template-columns:minmax(0,1.4fr) minmax(260px,1fr)}
+.live{display:grid;gap:18px;grid-template-columns:minmax(0,1.4fr) minmax(280px,1fr)}
 .view{position:relative;background:#000;min-height:260px;border-radius:4px;overflow:hidden;display:grid;place-items:center}
 .view img{width:100%;display:block}.view img.map{position:absolute;inset:0;height:100%;object-fit:fill}
-.verdict{font-size:44px;font-weight:800}.OK{color:var(--ok)}.Defecto{color:var(--bad)}
-.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)}
+.verdict{font-size:38px;font-weight:800}.OK{color:var(--ok)}.Defecto{color:var(--bad)}.Medido{color:var(--info)}
+.row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
 .bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--acc)}
-.badge{display:inline-block;padding:1px 8px;border-radius:10px;border:1px solid var(--line);font-size:13px}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;border:1px solid var(--line);font-size:12px}
 .badge.demo{color:var(--warn);border-color:var(--warn)}.badge.shared{border-color:var(--acc);color:var(--acc);font-weight:600}
-.filters{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:14px}
+.badge.ok{border-color:var(--ok);color:var(--ok);font-weight:600}.badge.bad{border-color:var(--bad);color:var(--bad);font-weight:600}
+.badge.info{border-color:var(--info);color:var(--info)}
+.filters{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:14px}
 .tw{overflow-x:auto}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+details{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:8px 12px;margin-top:10px}
+details summary{font-weight:600;cursor:pointer;font-size:13px;color:var(--acc)}
 @media(max-width:760px){.layout,.live{grid-template-columns:1fr}nav{border-right:0;border-bottom:1px solid var(--line)}}
-@media(prefers-reduced-motion:no-preference){.verdict{transition:color .2s}}
 </style></head><body>
 <section id="login"><form class="card" id="lf">
 <h1>Inspección de machetes</h1><p class="mute">IMACASA · Control de calidad con visión por computadora</p>
@@ -47,40 +50,75 @@ main{padding:20px;min-width:0}
 <div class="err" id="le" role="alert"></div><button class="btn">Iniciar sesión</button></form></section>
 
 <div id="app" class="hide">
-<header><strong>Inspección de machetes</strong><span><span class="mute" id="who"></span> <button class="btn sec" id="out" style="padding:6px 12px">Cerrar sesión</button></span></header>
+<header><strong>IMACASA · Inspección de Calidad</strong><span><span class="mute" id="who"></span> <button class="btn sec" id="out" style="padding:6px 12px">Cerrar sesión</button></span></header>
 <div class="layout"><nav aria-label="Estaciones"><h2>Estaciones</h2><div id="sts"></div>
-<p class="mute" style="font-size:13px">Solo PC12 tiene detector activo. PC08 y PC10 se integran en la siguiente fase.</p></nav>
+<p class="mute" style="font-size:12px;margin-top:16px">PC12 (Inyectado) y PC10 (Montaje) integran metrología de desface. PC08 está prevista para la siguiente fase.</p></nav>
 <main><div class="tabs" role="tablist">
 <button class="tab" role="tab" data-t="board" aria-selected="true">Tablero</button>
-<button class="tab" role="tab" data-t="live" aria-selected="false">En vivo</button>
+<button class="tab" role="tab" data-t="live" aria-selected="false">En vivo (Visual)</button>
+<button class="tab" role="tab" data-t="medir" aria-selected="false">Medición (OpenCV)</button>
 <button class="tab" role="tab" data-t="hist" aria-selected="false">Historial</button></div>
 
+<!-- TABLERO -->
 <section id="board"><div class="grid" id="cards"></div></section>
 
+<!-- EN VIVO (VISUAL PATCHCORE) -->
 <section id="live" class="hide"><div class="live"><div>
-<div class="view" id="view"><span class="mute" style="color:#9aa">Sin imagen. Carga una foto del machete.</span></div>
+<div class="view" id="view"><span class="mute" style="color:#9aa">Sin imagen. Carga una foto de la zona del machete.</span></div>
 <div class="filters" style="margin-top:12px">
-<div><label for="roi">Zona a inspeccionar</label><select id="roi"></select></div>
-<div><label for="mid">ID de machete</label><input id="mid" placeholder="M-001"></div>
-<div><label for="img">Imagen (simula la cámara)</label><input id="img" type="file" accept="image/*"></div></div>
-<button class="btn" id="go">Inspeccionar</button> <span class="err" id="ie"></span></div>
-<div class="card" style="width:auto"><h2>Resultado · <span id="rs">PC12</span> Inyectado</h2>
+<div><label for="roi">Zona de inspección</label><select id="roi"></select></div>
+<div><label for="st_live">Estación</label><select id="st_live"><option value="PC12">PC12 · Inyectado</option></select></div>
+<div><label for="mid">ID de machete</label><input id="mid" placeholder="M-101"></div>
+<div><label for="img">Imagen cenital/ROI</label><input id="img" type="file" accept="image/*"></div></div>
+<button class="btn" id="go">Inspeccionar anomalías</button> <span class="err" id="ie"></span></div>
+<div class="card" style="width:auto"><h2>Resultado de Inferencia</h2>
 <div class="verdict mute" id="vd">—</div>
-<div class="row"><span>Tipo de defecto</span><strong id="df">—</strong></div>
+<div class="row"><span>Defecto detectado</span><strong id="df">—</strong></div>
 <div class="row"><span>Confianza</span><strong id="cf">—</strong></div>
 <div class="bar" aria-hidden="true"><i id="cb" style="width:0"></i></div>
 <div class="row"><span>Latencia</span><span id="lt">—</span></div>
-<div class="row"><span>Modelo</span><span id="md">—</span></div></div></div></section>
+<div class="row"><span>Método</span><span id="md">—</span></div></div></div></section>
 
+<!-- MEDICIÓN GEOMÉTRICA (OPENCV) -->
+<section id="medir" class="hide"><div class="live"><div>
+<div class="view" id="view_m"><span class="mute" style="color:#9aa">Carga fotografía cenital con retroiluminación.</span></div>
+<div class="filters" style="margin-top:12px">
+<div><label for="st_med">Estación</label><select id="st_med"><option value="PC12">PC12 · Inyectado</option><option value="PC10">PC10 · Montaje</option></select></div>
+<div><label for="mid_m">ID Machete</label><input id="mid_m" placeholder="M-201"></div>
+<div><label for="img_m">Fotografía cenital</label><input id="img_m" type="file" accept="image/*"></div>
+<div><label for="mm_px">Calibración (mm/px)</label><input id="mm_px" type="number" step="0.001" value="0.290"></div>
+<div><label for="mango">Posición mango</label><select id="mango"><option value="derecha">Derecha</option><option value="izquierda">Izquierda</option></select></div></div>
+
+<details><summary>Tolerancias dimensionales (Opcional — Pendiente confirmación IMACASA)</summary>
+<div class="filters" style="margin-top:8px">
+<div><label for="l_nom">Largo nominal (mm)</label><input id="l_nom" type="number" step="0.5" placeholder="ej. 550"></div>
+<div><label for="l_tol">Largo tol ± (mm)</label><input id="l_tol" type="number" step="0.1" placeholder="ej. 2.0"></div>
+<div><label for="w_nom">Ancho nominal (mm)</label><input id="w_nom" type="number" step="0.5" placeholder="ej. 60"></div>
+<div><label for="w_tol">Ancho tol ± (mm)</label><input id="w_tol" type="number" step="0.1" placeholder="ej. 1.5"></div>
+<div><label for="d_max">Desface cacha máx (mm)</label><input id="d_max" type="number" step="0.1" placeholder="ej. 1.0"></div></div>
+</details>
+
+<button class="btn" id="go_m">Calcular dimensiones y desface</button> <span class="err" id="me_err"></span></div>
+
+<div class="card" style="width:auto"><h2>Metrología 2D (OpenCV)</h2>
+<div class="verdict mute" id="m_vd">—</div>
+<div class="row"><span>Largo total</span><div><strong id="m_l">—</strong> <span id="m_l_badge" class="badge"></span></div></div>
+<div class="row"><span>Ancho máximo</span><div><strong id="m_w">—</strong> <span id="m_w_badge" class="badge"></span></div></div>
+<div class="row"><span>Desface de cacha</span><div><strong id="m_d">—</strong> <span id="m_d_badge" class="badge shared"></span></div></div>
+<div class="row"><span>Estación</span><span id="m_st">—</span></div>
+<div class="row"><span>Espesor</span><span class="mute">Medición instrumental (no 2D)</span></div></div></div></section>
+
+<!-- HISTORIAL -->
 <section id="hist" class="hide"><div class="filters">
 <div><label for="fs">Estación</label><select id="fs"><option value="">Todas</option><option>PC08</option><option>PC10</option><option>PC12</option></select></div>
 <div><label for="fd">Defecto</label><select id="fd"><option value="">Todos</option></select></div>
 <div><label for="f1">Desde</label><input id="f1" type="date"></div><div><label for="f2">Hasta</label><input id="f2" type="date"></div></div>
-<div class="tw"><table><thead><tr><th>Fecha (UTC)</th><th>Estación</th><th>Machete</th><th>Veredicto</th><th>Defecto</th><th>Confianza</th><th>Origen</th></tr></thead><tbody id="tb"></tbody></table></div>
+<div class="tw"><table><thead><tr><th>Fecha (UTC)</th><th>Estación</th><th>Machete</th><th>Veredicto</th><th>Defecto / Registro</th><th>Confianza / Medida</th><th>Origen</th></tr></thead><tbody id="tb"></tbody></table></div>
 <p class="mute" id="he"></p></section>
 </main></div></div>
+
 <script>
-const $=s=>document.querySelector(s);let T=sessionStorage.t||"",CAT=null,heat=null;
+const $=s=>document.querySelector(s);let T=sessionStorage.t||"",CAT=null;
 async function api(p,o={}){o.headers={...(o.headers||{}),Authorization:"Bearer "+T};const r=await fetch(p,o);
  if(r.status==401&&p!="/api/login"){logout();throw Error("Sesión vencida")}
  if(!r.ok)throw Error((await r.json()).detail||"Error");return r.json()}
@@ -96,25 +134,52 @@ async function start(){CAT=await api("/api/catalogo");$("#login").classList.add(
  board();hist()}
 async function board(){const r=await api("/api/resumen");
  $("#cards").innerHTML=CAT.estaciones.map(s=>{const x=r[s.id]||{total:0,defectos:0};const p=x.total?Math.round(100*x.defectos/x.total):0;
-  return `<div class="card" style="width:auto"><h2>${s.id} ${s.nombre}</h2><div class="big">${p}%</div><div class="mute">de defectos · ${x.total} inspecciones</div>
-  <p><span class="badge ${s.implementada?"":"demo"}">${s.implementada?"Detector activo":"Sin implementar"}</span></p></div>`}).join("");
- $("#sts").innerHTML=CAT.estaciones.map(s=>`<button class="st" aria-pressed="${s.id=="PC12"}" ${s.implementada?"":"disabled"}>${s.id}<small>${s.nombre}</small></button>`).join("")}
+  return `<div class="card" style="width:auto"><h2>${s.id} · ${s.nombre}</h2><div class="big">${p}%</div><div class="mute">de defectos · ${x.total} piezas inspeccionadas</div>
+  <p><span class="badge ${s.id=="PC12"||s.id=="PC10"?"ok":"demo"}">${s.id=="PC12"?"Visual + Metrología":(s.id=="PC10"?"Metrología desface":"Sin implementar")}</span></p></div>`}).join("");
+ $("#sts").innerHTML=CAT.estaciones.map(s=>`<button class="st" aria-pressed="${s.id=="PC12"}">${s.id}<small>${s.nombre}</small></button>`).join("")}
+
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x==b));
- ["board","live","hist"].forEach(id=>$("#"+id).classList.toggle("hide",id!=b.dataset.t));if(b.dataset.t=="hist")hist();if(b.dataset.t=="board")board()});
+ ["board","live","medir","hist"].forEach(id=>$("#"+id).classList.toggle("hide",id!=b.dataset.t));
+ if(b.dataset.t=="hist")hist();if(b.dataset.t=="board")board()});
+
 $("#img").onchange=e=>{const f=e.target.files[0];if(f)$("#view").innerHTML=`<img alt="Machete a inspeccionar" src="${URL.createObjectURL(f)}">`};
+$("#img_m").onchange=e=>{const f=e.target.files[0];if(f)$("#view_m").innerHTML=`<img alt="Silueta a medir" src="${URL.createObjectURL(f)}">`};
+
 $("#go").onclick=async()=>{$("#ie").textContent="";const f=$("#img").files[0];if(!f){$("#ie").textContent="Carga una imagen primero.";return}
- const fd=new FormData();fd.append("imagen",f);fd.append("roi",$("#roi").value);fd.append("station","PC12");fd.append("machete",$("#mid").value||"sin-id");
+ const fd=new FormData();fd.append("imagen",f);fd.append("roi",$("#roi").value);fd.append("station",$("#st_live").value);fd.append("machete",$("#mid").value||"sin-id");
  try{const d=await api("/api/inspeccionar",{method:"POST",body:fd});
   $("#vd").textContent=d.veredicto;$("#vd").className="verdict "+d.veredicto;$("#df").textContent=d.defecto||"Ninguno";
   $("#cf").textContent=Math.round(d.confianza*100)+" %";$("#cb").style.width=d.confianza*100+"%";$("#lt").textContent=d.latencia_ms+" ms";
-  $("#md").innerHTML=d.modo=="demo"?'<span class="badge demo">demo (sin modelo entrenado)</span>':"PatchCore";
+  $("#md").innerHTML=d.modo=="demo"?'<span class="badge demo">DEMO (sin pesos de planta)</span>':"PatchCore";
   const v=$("#view");v.querySelectorAll(".map").forEach(x=>x.remove());if(d.mapa)v.insertAdjacentHTML("beforeend",`<img class="map" alt="Zonas anómalas" src="data:image/png;base64,${d.mapa}">`);
   board()}catch(x){$("#ie").textContent=x.message}};
+
+$("#go_m").onclick=async()=>{$("#me_err").textContent="";const f=$("#img_m").files[0];if(!f){$("#me_err").textContent="Carga una fotografía cenital.";return}
+ const fd=new FormData();fd.append("imagen",f);fd.append("mm_px",$("#mm_px").value);fd.append("mango",$("#mango").value);
+ fd.append("station",$("#st_med").value);fd.append("machete",$("#mid_m").value||"sin-id");
+ if($("#l_nom").value&&$("#l_tol").value){fd.append("largo_nom",$("#l_nom").value);fd.append("largo_tol",$("#l_tol").value)}
+ if($("#w_nom").value&&$("#w_tol").value){fd.append("ancho_nom",$("#w_nom").value);fd.append("ancho_tol",$("#w_tol").value)}
+ if($("#d_max").value){fd.append("desface_max",$("#d_max").value)}
+ try{const d=await api("/api/medir",{method:"POST",body:fd});
+  const vClass=d.veredicto_global=="OK"?"OK":(d.veredicto_global=="Defecto"?"Defecto":"Medido");
+  $("#m_vd").textContent=d.veredicto_global;$("#m_vd").className="verdict "+vClass;
+  $("#m_l").textContent=d.medidas.largo_mm+" mm";
+  $("#m_w").textContent=d.medidas.ancho_max_mm+" mm";
+  $("#m_d").textContent=d.medidas.desface_mm+" mm";
+  $("#m_st").textContent=d.estacion;
+  const tol=d.dentro_de_tolerancia||{};
+  const setBadge=(id,val)=>{const el=$("#"+id);if(val===true){el.textContent="Conforme";el.className="badge ok"}
+   else if(val===false){el.textContent="Fuera tol.";el.className="badge bad"}else{el.textContent="Medido";el.className="badge info"}};
+  setBadge("m_l_badge",tol.largo_mm);setBadge("m_w_badge",tol.ancho_max_mm);setBadge("m_d_badge",tol.desface_mm);
+  board()}catch(x){$("#me_err").textContent=x.message}};
+
 async function hist(){const q=new URLSearchParams({station:$("#fs").value,defect:$("#fd").value,desde:$("#f1").value,hasta:$("#f2").value});
  const rows=await api("/api/historial?"+q);const nm=Object.fromEntries(CAT.defectos.map(d=>[d.id,d.nombre]));
- $("#tb").innerHTML=rows.map(r=>`<tr><td>${r.ts.replace("T"," ")}</td><td><span class="badge ${r.defect=="desface_cacha"?"shared":""}">${r.station}</span></td><td>${r.machete}</td>
-  <td class="${r.verdict}"><strong>${r.verdict}</strong></td><td>${r.defect?(nm[r.defect]||r.defect):"—"}</td><td>${Math.round(r.confidence*100)} %</td>
-  <td><span class="badge ${r.modo=="demo"?"demo":""}">${r.modo}</span></td></tr>`).join("");
+ $("#tb").innerHTML=rows.map(r=>{const isDesface=r.defect=="desface_cacha";
+  return `<tr><td>${r.ts.replace("T"," ")}</td><td><span class="badge ${isDesface?"shared":""}">${r.station}</span></td><td>${r.machete}</td>
+  <td class="${r.verdict}"><strong>${r.verdict}</strong></td><td>${r.defect?(nm[r.defect]||r.defect):"—"}</td>
+  <td>${r.modo=="opencv"?(r.score?r.score+" mm":"Métrica"):Math.round(r.confidence*100)+" %"}</td>
+  <td><span class="badge ${r.modo=="demo"?"demo":(r.modo=="opencv"?"info":"")}">${r.modo}</span></td></tr>`}).join("");
  $("#he").textContent=rows.length?"":"Sin resultados con estos filtros. Cambia o limpia los filtros."}
 ["fs","fd","f1","f2"].forEach(i=>$("#"+i).onchange=hist);
 if(T)start().catch(logout);

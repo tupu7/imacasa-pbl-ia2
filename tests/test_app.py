@@ -270,3 +270,45 @@ async def test_historial_filter_by_station(client):
     for row in data:
         assert row["station"] == "PC12"
 
+
+@pytest.mark.anyio
+async def test_medir_persists_to_database(client):
+    """POST /api/medir guarda el registro en la base de datos de mediciones."""
+    token = await get_token(client)
+    img = make_machete_silhouette()
+    r = await client.post(
+        "/api/medir",
+        headers={"Authorization": f"Bearer {token}"},
+        data={"mm_px": "0.29", "mango": "derecha", "station": "PC10", "machete": "M-PC10-01"},
+        files={"imagen": ("machete.jpg", img, "image/jpeg")},
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert "id" in data
+    assert data["estacion"] == "PC10"
+
+    # Verificar que aparece en GET /api/mediciones
+    r_list = await client.get("/api/mediciones?station=PC10", headers={"Authorization": f"Bearer {token}"})
+    assert r_list.status_code == 200
+    meds = r_list.json()
+    assert any(m["machete"] == "M-PC10-01" for m in meds)
+
+
+@pytest.mark.anyio
+async def test_medir_out_of_tolerance_records_defect(client):
+    """POST /api/medir con tolerancia violada genera veredicto Defecto."""
+    token = await get_token(client)
+    img = make_machete_silhouette()
+    # Forzamos una tolerancia de largo que no cumple (la silueta mide ~145 mm)
+    r = await client.post(
+        "/api/medir",
+        headers={"Authorization": f"Bearer {token}"},
+        data={"mm_px": "0.29", "mango": "derecha", "station": "PC12", "machete": "M-DEF-01",
+              "largo_nom": "50.0", "largo_tol": "2.0"},
+        files={"imagen": ("machete.jpg", img, "image/jpeg")},
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["veredicto_global"] == "Defecto"
+    assert data["dentro_de_tolerancia"]["largo_mm"] is False
+

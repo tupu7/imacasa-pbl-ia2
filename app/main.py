@@ -39,6 +39,10 @@ DEFECTS = [("desface_cacha", "Desface de cacha", ["PC10", "PC12"]),
 db = sqlite3.connect(str(BASE_DIR / "data" / "app.db"), check_same_thread=False); db.row_factory = sqlite3.Row
 db.execute("""CREATE TABLE IF NOT EXISTS insp(id INTEGER PRIMARY KEY, ts TEXT, station TEXT, machete TEXT,
  verdict TEXT, defect TEXT, confidence REAL, score REAL, modo TEXT, image TEXT)""")
+db.execute("""CREATE TABLE IF NOT EXISTS mediciones(
+    id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT, station TEXT, machete TEXT, mm_px REAL,
+    largo_mm REAL, ancho_max_mm REAL, desface_mm REAL, largo_ok INTEGER, ancho_ok INTEGER,
+    desface_ok INTEGER, veredicto_global TEXT, tolerancias TEXT, image TEXT)""")
 if not db.execute("SELECT 1 FROM insp").fetchone():  # filas de demostracion, marcadas modo='demo'
     for i, (st, d, v) in enumerate([("PC10", "desface_cacha", "Defecto"), ("PC12", "desface_cacha", "Defecto"),
             ("PC12", None, "OK"), ("PC12", "oxido_hoja", "Defecto"), ("PC08", "torcido", "Defecto"), ("PC10", None, "OK")]):
@@ -142,18 +146,77 @@ def historial(station: str = "", defect: str = "", desde: str = "", hasta: str =
 async def medir_ep(imagen: UploadFile = File(...), mm_px: float = Form(...), mango: str = Form("derecha"),
                    mango_mm: float = Form(130.0), largo_nom: float = Form(None), largo_tol: float = Form(None),
                    ancho_nom: float = Form(None), ancho_tol: float = Form(None), desface_max: float = Form(None),
+                   station: str = Form("PC12"), machete: str = Form("sin-id"),
                    _=Depends(user)):
     """Mide largo, ancho y desface. Sin tolerancias (pendientes de IMACASA) devuelve solo las medidas."""
     import cv2, medicion
     if mm_px <= 0 or mango not in ("derecha", "izquierda"): raise HTTPException(400, "mm_px > 0 y mango derecha|izquierda.")
-    img = cv2.imdecode(np.frombuffer(await imagen.read(), np.uint8), cv2.IMREAD_COLOR)
+    if station not in ("PC10", "PC12"): raise HTTPException(400, "La medición dimensional aplica a PC10 y PC12.")
+    raw = await imagen.read()
+    if not raw: raise HTTPException(400, "El archivo de imagen está vacío.")
+    img = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)
     if img is None: raise HTTPException(400, "El archivo enviado no es una imagen válida.")
     try: med = medicion.medir(img, mm_px, mango, mango_mm)
     except ValueError as e: raise HTTPException(422, str(e))
     spec = {"largo_mm": (largo_nom, largo_tol) if largo_nom is not None and largo_tol is not None else None,
             "ancho_max_mm": (ancho_nom, ancho_tol) if ancho_nom is not None and ancho_tol is not None else None,
             "desface_mm": desface_max}
-    return {"medidas": med, "dentro_de_tolerancia": medicion.veredicto(med, spec)}
+    tol_result = medicion.veredicto(med, spec)
+
+    # Determinar veredicto global:
+    if not tol_result:
+        veredicto_global = "Medido (sin tolerancias)"
+    elif all(tol_result.values()):
+        veredicto_global = "OK"
+    else:
+        veredicto_global = "Defecto"
+
+    t0 = time.time()
+    path = str(BASE_DIR / "data" / "images" / f"med_{int(t0*1000)}.jpg")
+    cv2.imwrite(path, img)
+
+    ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    largo_val = 1 if tol_result.get("largo_mm") is True else (0 if tol_result.get("largo_mm") is False else None)
+    ancho_val = 1 if tol_result.get("ancho_max_mm") is True else (0 if tol_result.get("ancho_max_mm") is False else None)
+    desface_val = 1 if tol_result.get("desface_mm") is True else (0 if tol_result.get("desface_mm") is False else None)
+
+    cur = db.execute(
+        """INSERT INTO mediciones(ts, station, machete, mm_px, largo_mm, ancho_max_mm, desface_mm,
+                                 largo_ok, ancho_ok, desface_ok, veredicto_global, tolerancias, image)
+           VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (ts, station, machete, mm_px, med["largo_mm"], med["ancho_max_mm"], med["desface_mm"],
+         largo_val, ancho_val, desface_val, veredicto_global, json.dumps(spec), path)
+    )
+    # Reflejar en la tabla de inspecciones generales para el tablero e historial unificado
+    if veredicto_global == "Defecto":
+        def_code = "desface_cacha" if tol_result.get("desface_mm") is False else (
+            "dimension_largo" if tol_result.get("largo_mm") is False else "dimension_ancho")
+        db.execute("INSERT INTO insp(ts,station,machete,verdict,defect,confidence,score,modo,image) VALUES(?,?,?,?,?,?,?,?,?)",
+                   (ts, station, machete, "Defecto", def_code, 1.0, med["desface_mm"], "opencv", path))
+    elif veredicto_global == "OK":
+        db.execute("INSERT INTO insp(ts,station,machete,verdict,defect,confidence,score,modo,image) VALUES(?,?,?,?,?,?,?,?,?)",
+                   (ts, station, machete, "OK", None, 1.0, 0, "opencv", path))
+    db.commit()
+
+    return {
+        "id": cur.lastrowid,
+        "estacion": station,
+        "machete": machete,
+        "medidas": med,
+        "dentro_de_tolerancia": tol_result,
+        "veredicto_global": veredicto_global,
+        "timestamp": ts
+    }
+
+@app.get("/api/mediciones")
+def listar_mediciones(station: str = "", _=Depends(user)):
+    q = "SELECT * FROM mediciones WHERE 1=1"
+    a = []
+    if station:
+        q += " AND station = ?"
+        a.append(station)
+    q += " ORDER BY id DESC LIMIT 100"
+    return [dict(r) for r in db.execute(q, a)]
 
 @app.get("/")
 def index(): return FileResponse(str(BASE_DIR / "static" / "index.html"))
