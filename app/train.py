@@ -4,7 +4,10 @@ Ejemplo: python train.py --roi mal_inyectado --good data/good/mal_inyectado
 import argparse
 import glob
 import os
+from pathlib import Path
 from patchcore import PatchCore
+
+BASE_DIR = Path(__file__).resolve().parent
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--roi", required=True)
@@ -27,8 +30,9 @@ train_files, calibration_files = files[:split], files[split:]
 
 detector = PatchCore()
 detector.fit(train_files, calibration_files, ratio=args.ratio)
-os.makedirs("data/models", exist_ok=True)
-output = f"data/models/{args.roi}.pt"
+models_dir = BASE_DIR / "data" / "models"
+models_dir.mkdir(parents=True, exist_ok=True)
+output = str(models_dir / f"{args.roi}.pt")
 detector.save(output)
 print(f"{args.roi}: {len(train_files)} train, {len(calibration_files)} calibración, "
       f"umbral={detector.thr:.3f}, archivo={output}")

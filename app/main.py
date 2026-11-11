@@ -1,15 +1,32 @@
 import base64, hashlib, hmac, io, json, os, sqlite3, time
 from datetime import datetime, timezone
+from pathlib import Path
 import numpy as np
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from PIL import Image, UnidentifiedImageError
 
-SECRET = os.getenv("APP_SECRET", "cambia-este-secreto").encode()
+# Directorio base del módulo (app/), independiente del CWD
+BASE_DIR = Path(__file__).resolve().parent
+
+# --- Validación obligatoria de variables de entorno ---
+_app_secret = os.getenv("APP_SECRET", "")
+if not _app_secret or _app_secret in ("cambia-este-secreto", "reemplaza-por-un-secreto-aleatorio-de-al-menos-32-caracteres"):
+    raise SystemExit(
+        "ERROR: APP_SECRET no está configurado o contiene el valor de ejemplo.\n"
+        "Copia .env.example a .env y configura un secreto largo y aleatorio."
+    )
+SECRET = _app_secret.encode()
+
+_app_users = os.getenv("APP_USERS", "")
+if not _app_users:
+    raise SystemExit(
+        "ERROR: APP_USERS no está configurado.\n"
+        "Copia .env.example a .env y define al menos un usuario en formato usuario:clave:rol."
+    )
 # APP_USERS="usuario:clave:rol,..."  (roles: operador | calidad | admin)
-USERS = {u: (p, r) for u, p, r in (x.split(":") for x in
-         os.getenv("APP_USERS", "operador:operador123:operador,calidad:calidad123:calidad").split(","))}
+USERS = {u: (p, r) for u, p, r in (x.split(":") for x in _app_users.split(","))}
 STATIONS = {"PC08": ("Enderezado", False), "PC10": ("Montaje", False), "PC12": ("Inyectado", True)}
 # Un detector PatchCore por zona (ROI) -> cada uno responde una sola pregunta
 ROIS = {"mal_inyectado": "Mal inyectado", "pollera_tapada": "Pollera tapada",
@@ -18,8 +35,8 @@ DEFECTS = [("desface_cacha", "Desface de cacha", ["PC10", "PC12"]),
            ("dimension_largo", "Largo fuera de especificación", ["PC12"]),
            ("dimension_ancho", "Ancho fuera de especificación", ["PC12"])] + \
           [(k, v, ["PC12"]) for k, v in ROIS.items()]
-os.makedirs("data/images", exist_ok=True)
-db = sqlite3.connect("data/app.db", check_same_thread=False); db.row_factory = sqlite3.Row
+(BASE_DIR / "data" / "images").mkdir(parents=True, exist_ok=True)
+db = sqlite3.connect(str(BASE_DIR / "data" / "app.db"), check_same_thread=False); db.row_factory = sqlite3.Row
 db.execute("""CREATE TABLE IF NOT EXISTS insp(id INTEGER PRIMARY KEY, ts TEXT, station TEXT, machete TEXT,
  verdict TEXT, defect TEXT, confidence REAL, score REAL, modo TEXT, image TEXT)""")
 if not db.execute("SELECT 1 FROM insp").fetchone():  # filas de demostracion, marcadas modo='demo'
@@ -31,11 +48,11 @@ if not db.execute("SELECT 1 FROM insp").fetchone():  # filas de demostracion, ma
 
 _models = {}
 def detector(roi):
-    p = f"data/models/{roi}.pt"
+    p = BASE_DIR / "data" / "models" / f"{roi}.pt"
     if roi not in _models:
-        if os.path.exists(p):
+        if p.exists():
             from patchcore import PatchCore
-            _models[roi] = PatchCore().load(p)
+            _models[roi] = PatchCore().load(str(p))
         else:
             _models[roi] = None   # sin modelo entrenado -> modo demo
     return _models[roi]
@@ -106,7 +123,7 @@ async def inspeccionar(imagen: UploadFile = File(...), roi: str = Form(...), sta
     except (UnidentifiedImageError, OSError, ValueError):
         raise HTTPException(400, "El archivo enviado no es una imagen válida.")
     t0 = time.time(); bad, conf, score, heat, modo = infer(roi, img, raw)
-    path = f"data/images/{int(t0*1000)}.jpg"; img.save(path)
+    path = str(BASE_DIR / "data" / "images" / f"{int(t0*1000)}.jpg"); img.save(path)
     ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
     db.execute("INSERT INTO insp(ts,station,machete,verdict,defect,confidence,score,modo,image) VALUES(?,?,?,?,?,?,?,?,?)",
                (ts, station, machete, "Defecto" if bad else "OK", roi if bad else None, conf, score, modo, path)); db.commit()
@@ -139,4 +156,4 @@ async def medir_ep(imagen: UploadFile = File(...), mm_px: float = Form(...), man
     return {"medidas": med, "dentro_de_tolerancia": medicion.veredicto(med, spec)}
 
 @app.get("/")
-def index(): return FileResponse("static/index.html")
+def index(): return FileResponse(str(BASE_DIR / "static" / "index.html"))
